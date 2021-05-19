@@ -79,6 +79,9 @@ public class MojangAPIWrapper {
      * @return The UUID that pertains to the username
      */
     public UUID fromUsername(String username) {
+        if (getCachedEntry(username) != null) {
+            return getCachedEntry(username).getValue();
+        }
         try {
             HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/users/profiles/minecraft/" + username)).openConnection();
             connection.setRequestProperty("User-Agent", userAgent);
