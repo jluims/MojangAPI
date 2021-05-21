@@ -7,6 +7,23 @@ Run the following command in a shell:
 ./gradlew build
 ```
 
+# Gradle
+Add jitpack.io to your gradle maven repositories
+```gradle
+	allprojects {
+		repositories {
+			...
+			maven { url 'https://jitpack.io' }
+		}
+	}
+```
+Add this project to your dependencies
+```gradle
+	dependencies {
+	        implementation 'com.github.BrxenDev:MojangAPI:Tag'
+	}
+```
+
 # Examples
 Authentication wrapper:
 ```java
