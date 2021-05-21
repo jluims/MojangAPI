@@ -10,18 +10,17 @@ Run the following command in a shell:
 # Gradle
 Add jitpack.io to your gradle maven repositories
 ```gradle
-	allprojects {
-		repositories {
-			...
-			maven { url 'https://jitpack.io' }
-		}
+allprojects {
+	repositories {
+		maven { url 'https://jitpack.io' }
 	}
+}
 ```
 Add this project to your dependencies
 ```gradle
-	dependencies {
-	        implementation 'com.github.BrxenDev:MojangAPI:Tag'
-	}
+dependencies {
+	implementation 'com.github.BrxenDev:MojangAPI:Tag'
+}
 ```
 
 # Examples
