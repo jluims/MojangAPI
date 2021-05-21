@@ -19,7 +19,7 @@ allprojects {
 Add this project to your dependencies
 ```gradle
 dependencies {
-	implementation 'com.github.BrxenDev:MojangAPI:Tag'
+	implementation 'com.github.BrxenDev:MojangAPI:v1.1'
 }
 ```
 
