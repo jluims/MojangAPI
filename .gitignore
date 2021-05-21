@@ -148,7 +148,4 @@ gradle-app.setting
 
 ### Gradle Patch ###
 **/build/
-
-src/test/
-
 # End of https://www.toptal.com/developers/gitignore/api/intellij,java,gradle

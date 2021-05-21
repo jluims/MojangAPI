@@ -6,6 +6,7 @@ import net.brxen.mojangapi.entry.NameHistoryEntry;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 
@@ -138,7 +139,7 @@ public class MojangAPIWrapper {
 
     /**
      * Fetches a list of NameHistoryEntries from the API
-     * Entries are sorted from oldest -> newest
+     * Entries are sorted from oldest to newest
      * @param uuid UUID used to fetch NameHistoryEntries
      * @return List of NameHistoryEntries received from the API
      */
@@ -166,4 +167,108 @@ public class MojangAPIWrapper {
         } catch (IOException ignored) {}
         return null;
     }
+
+    /**
+     * Returns the player's skin URL
+     * @param uuid
+     * @return Entry of skin and cape URL (cape may be null)
+     */
+    public String getSkinUrl(UUID uuid) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + Utils.toUndashed(uuid))).openConnection();
+            connection.setRequestProperty("User-Agent", userAgent);
+
+            if (connection.getResponseCode() != 200) {
+                return null;
+            }
+
+            String response = Utils.readInputStream(connection.getInputStream());
+            String dataAsBase64 = JsonParser.parseString(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
+            JsonObject data = JsonParser.parseString(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
+            return data.get("textures").getAsJsonObject().get("SKIN").getAsJsonObject().get("url").getAsString();
+
+        } catch (IOException ignored) {}
+        return null;
+    }
+
+    public String getCapeUrl(UUID uuid) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + Utils.toUndashed(uuid))).openConnection();
+            connection.setRequestProperty("User-Agent", userAgent);
+
+            if (connection.getResponseCode() != 200) {
+                return null;
+            }
+
+            String response = Utils.readInputStream(connection.getInputStream());
+            String dataAsBase64 = JsonParser.parseString(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
+            JsonObject data = JsonParser.parseString(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
+            String capeUrl = data.get("textures").getAsJsonObject().has("CAPE") ? data.get("textures").getAsJsonObject().get("CAPE").getAsJsonObject().get("url").getAsString() : null;
+            return capeUrl;
+
+        } catch (IOException ignored) {}
+        return null;
+    }
+
+    /**
+     *
+     * @return List of SHA-256 hashes for blocked server IPs
+     */
+    public String[] getBlockedServerHashes() {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://sessionserver.mojang.com/blockedservers")).openConnection();
+            connection.setRequestProperty("User-Agent", userAgent);
+
+            String content = Utils.readInputStream(connection.getInputStream());
+
+            return content.split("\n");
+
+        } catch (IOException ignored) {}
+        return null;
+    }
+
+    public boolean resetSkin(UUID uuid, String accessToken) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/user/profile/" + Utils.toUndashed(uuid) + "/skin")).openConnection();
+            connection.setRequestMethod("DELETE");
+            connection.setRequestProperty("User-Agent", userAgent);
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+            return connection.getResponseCode() == 204;
+
+        } catch (IOException ignored) {}
+        return false;
+    }
+
+    public boolean verifySecurityLocation(String accessToken) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/user/security/location")).openConnection();
+            connection.setRequestProperty("User-Agent", userAgent);
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+
+            return connection.getResponseCode() == 204;
+
+        } catch (IOException ignored) {}
+        return false;
+    }
+
+    public boolean changeSkin(String accessToken, SkinType skinType, URL skinUrl) {
+        try {
+            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.minecraftservices.com/minecraft/profile/skins")).openConnection();
+            connection.setRequestProperty("User-Agent", userAgent);
+            connection.setRequestProperty("Content-Type", "application/json");
+            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+            connection.setDoOutput(true);
+            connection.setRequestMethod("POST");
+
+            JsonObject req = new JsonObject();
+            req.addProperty("variant", skinType.asString());
+            req.addProperty("url", skinUrl.toString());
+            Utils.writeOutputStream(connection.getOutputStream(), req.toString());
+            return connection.getResponseCode() == 204 || connection.getResponseCode() == 200;
+
+        } catch (IOException ignored) {}
+        return false;
+    }
+
 }
