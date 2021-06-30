@@ -49,7 +49,7 @@ public class MojangAuthWrapper {
                 responseStr.append(line);
             }
 
-            JsonObject responseObj = JsonParser.parseString(responseStr.toString()).getAsJsonObject();
+            JsonObject responseObj = new JsonParser().parse(responseStr.toString()).getAsJsonObject();
 
             return new Player(Utils.fromUndashed(responseObj.get("selectedProfile").getAsJsonObject().get("id").getAsString()), responseObj.get("selectedProfile").getAsJsonObject().get("name").getAsString(), responseObj.get("accessToken").getAsString());
 
@@ -85,7 +85,7 @@ public class MojangAuthWrapper {
                 responseStr.append(line);
             }
 
-            JsonObject responseObj = JsonParser.parseString(responseStr.toString()).getAsJsonObject();
+            JsonObject responseObj = new JsonParser().parse(responseStr.toString()).getAsJsonObject();
 
             return new Player(Utils.fromUndashed(responseObj.get("selectedProfile").getAsJsonObject().get("id").getAsString()), responseObj.get("selectedProfile").getAsJsonObject().get("name").getAsString(), responseObj.get("accessToken").getAsString());
 

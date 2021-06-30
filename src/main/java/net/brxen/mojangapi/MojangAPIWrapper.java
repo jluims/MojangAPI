@@ -57,7 +57,7 @@ public class MojangAPIWrapper {
                 responseStr.append(line);
             }
 
-            JsonArray responseObj = JsonParser.parseString(responseStr.toString()).getAsJsonArray();
+            JsonArray responseObj = new JsonParser().parse(responseStr.toString()).getAsJsonArray();
 
             Status status1 = Status.fromString(responseObj.get(0).getAsJsonObject().get("minecraft.net").getAsString());
             Status status2= Status.fromString(responseObj.get(0).getAsJsonObject().get("session.minecraft.net").getAsString());
@@ -89,7 +89,7 @@ public class MojangAPIWrapper {
 
             String content = Utils.readInputStream(connection.getInputStream());
             try {
-                JsonObject responseObj = JsonParser.parseString(content).getAsJsonObject();
+                JsonObject responseObj = new JsonParser().parse(content).getAsJsonObject();
                 UUID uuid = Utils.fromUndashed(responseObj.get("id").getAsString());
                 cacheUUID(username, uuid);
                 return uuid;
@@ -122,7 +122,7 @@ public class MojangAPIWrapper {
             Utils.writeOutputStream(connection.getOutputStream(), requestObj.toString());
 
             String responseStr = Utils.readInputStream(connection.getInputStream());
-            JsonArray responseObj = JsonParser.parseString(responseStr).getAsJsonArray();
+            JsonArray responseObj = new JsonParser().parse(responseStr).getAsJsonArray();
             HashMap<String, UUID> uuidList = new HashMap<>(responseObj.size());
 
             for (int i = responseObj.size() - 1; i >= 0; i--) {
@@ -149,7 +149,7 @@ public class MojangAPIWrapper {
             connection.setRequestProperty("User-Agent", userAgent);
 
             String responseStr = Utils.readInputStream(connection.getInputStream());
-            JsonArray responseObj = JsonParser.parseString(responseStr).getAsJsonArray();
+            JsonArray responseObj = new JsonParser().parse(responseStr).getAsJsonArray();
 
             List<NameHistoryEntry> nameEntries = new ArrayList<>();
 
@@ -183,8 +183,8 @@ public class MojangAPIWrapper {
             }
 
             String response = Utils.readInputStream(connection.getInputStream());
-            String dataAsBase64 = JsonParser.parseString(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
-            JsonObject data = JsonParser.parseString(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
+            String dataAsBase64 = new JsonParser().parse(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
+            JsonObject data = new JsonParser().parse(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
             return data.get("textures").getAsJsonObject().get("SKIN").getAsJsonObject().get("url").getAsString();
 
         } catch (IOException ignored) {}
@@ -201,8 +201,8 @@ public class MojangAPIWrapper {
             }
 
             String response = Utils.readInputStream(connection.getInputStream());
-            String dataAsBase64 = JsonParser.parseString(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
-            JsonObject data = JsonParser.parseString(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
+            String dataAsBase64 = new JsonParser().parse(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
+            JsonObject data = new JsonParser().parse(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
             String capeUrl = data.get("textures").getAsJsonObject().has("CAPE") ? data.get("textures").getAsJsonObject().get("CAPE").getAsJsonObject().get("url").getAsString() : null;
             return capeUrl;
 
