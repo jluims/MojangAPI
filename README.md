@@ -28,18 +28,18 @@ Authentication wrapper:
 ```java
 AuthenticationWrapper wrapper = new AuthenticationWrapper(clientToken, "YourUserAgent 1.0");
 // Login
-Player player = wrapper.authenicate(username, password);
+net.brxen.mojangapi.Player player = wrapper.authenicate(username, password);
 UUID uuid = player.getUUID();
 String username = player.getUsername();
 String accessToken = player.getAccessToken();
 ```
 API wrapper:
 ```java
-MojangAPIWrapper wrapper = new MojangAPIWrapper("YourUserAgent 1.0 / Alpha");
+net.brxen.mojangapi.MojangAPIWrapper wrapper = new net.brxen.mojangapi.MojangAPIWrapper("YourUserAgent 1.0 / Alpha");
 
-for (NameHistoryEntry entry : wrapper.fromUUID(UUID.fromString("547b8192-7905-44dd-90ae-58608787c141"))) {
-    Long date = entry.getDate();
-    System.out.println(entry.getName() + " " + (date != null ? date : ""));
+for (NameHistoryEntry net.brxen.mojangapi.entry : wrapper.fromUUID(UUID.fromString("547b8192-7905-44dd-90ae-58608787c141"))) {
+    Long date = net.brxen.mojangapi.entry.getDate();
+    System.out.println(net.brxen.mojangapi.entry.getName() + " " + (date != null ? date : ""));
 }
 ```
 
