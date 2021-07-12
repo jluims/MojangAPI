@@ -40,6 +40,10 @@ public class APIHelper {
         connection.setRequestProperty("Content-Type", contentType);
     }
 
+    public void setAuthorization(String authorization) {
+        connection.addRequestProperty("Authorization", authorization);
+    }
+
     public int getResponseCode() throws IOException {
         return connection.getResponseCode();
     }

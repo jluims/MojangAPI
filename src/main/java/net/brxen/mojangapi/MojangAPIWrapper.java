@@ -1,10 +1,12 @@
 package net.brxen.mojangapi;
 
-import com.google.gson.*;
-import net.brxen.mojangapi.exception.MojangAPIException;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import net.brxen.mojangapi.entry.NameHistoryEntry;
+import net.brxen.mojangapi.exception.MojangAPIException;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
@@ -13,8 +15,9 @@ import java.util.*;
 
 public class MojangAPIWrapper {
 
-    private final String userAgent;
     public final HashMap<String, UUID> cachedUUIDs = new HashMap<>();
+    private final String userAgent;
+
     public MojangAPIWrapper(String userAgent) {
         this.userAgent = userAgent;
     }
@@ -43,50 +46,44 @@ public class MojangAPIWrapper {
 
     /**
      * Returns the statuses of the Mojang APIs
+     *
      * @return Array of statuses
      */
-    public Status[] getAPIStatuses() {
+    public Status[] getAPIStatuses() throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://status.mojang.com/check")).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuilder responseStr = new StringBuilder();
-            String line;
+            APIHelper helper = new APIHelper(new URL("https://status.mojang.com/check"));
 
-            while ((line = reader.readLine()) != null) {
-                responseStr.append(line);
-            }
+            helper.setUserAgent(userAgent);
 
-            JsonArray responseObj = new JsonParser().parse(responseStr.toString()).getAsJsonArray();
+            JsonArray responseObj = (JsonArray) helper.getResponseJson();
+            JsonObject obj = responseObj.get(0).getAsJsonObject();
 
-            Status status1 = Status.fromString(responseObj.get(0).getAsJsonObject().get("minecraft.net").getAsString());
-            Status status2= Status.fromString(responseObj.get(0).getAsJsonObject().get("session.minecraft.net").getAsString());
-            Status status3 = Status.fromString(responseObj.get(0).getAsJsonObject().get("account.mojang.com").getAsString());
-            Status status4 = Status.fromString(responseObj.get(0).getAsJsonObject().get("authserver.mojang.com").getAsString());
-            Status status5 = Status.fromString(responseObj.get(0).getAsJsonObject().get("sessionserver.mojang.com").getAsString());
-            Status status6 = Status.fromString(responseObj.get(0).getAsJsonObject().get("api.mojang.com").getAsString());
-            Status status7 = Status.fromString(responseObj.get(0).getAsJsonObject().get("textures.minecraft.net").getAsString());
-            Status status8 = Status.fromString(responseObj.get(0).getAsJsonObject().get("mojang.com").getAsString());
+            Status status1 = Status.fromString(obj.getAsJsonObject().get("minecraft.net").getAsString());
+            Status status2 = Status.fromString(obj.getAsJsonObject().get("session.minecraft.net").getAsString());
+            Status status3 = Status.fromString(obj.getAsJsonObject().get("account.mojang.com").getAsString());
+            Status status4 = Status.fromString(obj.getAsJsonObject().get("authserver.mojang.com").getAsString());
+            Status status5 = Status.fromString(obj.getAsJsonObject().get("sessionserver.mojang.com").getAsString());
+            Status status6 = Status.fromString(obj.getAsJsonObject().get("api.mojang.com").getAsString());
+            Status status7 = Status.fromString(obj.getAsJsonObject().get("textures.minecraft.net").getAsString());
+            Status status8 = Status.fromString(obj.getAsJsonObject().get("mojang.com").getAsString());
 
-            return new Status[] {status1, status2, status3, status4, status5, status6, status7, status8};
+            return new Status[]{status1, status2, status3, status4, status5, status6, status7, status8};
         } catch (IOException ex) {
-            return null;
+            throw new MojangAPIException(ex.getMessage());
         }
+
     }
 
     public String getUsername(UUID uuid) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid.toString())).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
+            APIHelper helper = new APIHelper(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + uuid.toString()));
 
-            String content = Utils.readInputStream(connection.getInputStream());
-            try {
-                JsonObject responseObj = new JsonParser().parse(content).getAsJsonObject();
-                String username = responseObj.get("name").getAsString();
-                return username;
-            } catch (JsonParseException ex) {
-                throw new MojangAPIException(ex.getMessage());
-            }
+            helper.setUserAgent(userAgent);
+
+            JsonObject responseObj = (JsonObject) helper.getResponseJson();
+            String username = responseObj.get("name").getAsString();
+
+            return username;
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
         }
@@ -94,6 +91,7 @@ public class MojangAPIWrapper {
 
     /**
      * Fetches a UUID from a username using Mojang's APIs
+     *
      * @param username Username that pertains to UUID
      * @return The UUID that pertains to the username
      */
@@ -102,18 +100,16 @@ public class MojangAPIWrapper {
             return getCachedEntry(username).getValue();
         }
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/users/profiles/minecraft/" + username)).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
+            APIHelper helper = new APIHelper(new URL("https://api.mojang.com/users/profiles/minecraft/" + username));
 
-            String content = Utils.readInputStream(connection.getInputStream());
-            try {
-                JsonObject responseObj = new JsonParser().parse(content).getAsJsonObject();
-                UUID uuid = Utils.fromUndashed(responseObj.get("id").getAsString());
-                cacheUUID(username, uuid);
-                return uuid;
-            } catch (JsonParseException ex) {
-                throw new MojangAPIException(ex.getMessage());
-            }
+            helper.setUserAgent(userAgent);
+
+            JsonObject responseObj = (JsonObject) helper.getResponseJson();
+            UUID uuid = Utils.fromUndashed(responseObj.get("id").getAsString());
+            cacheUUID(username, uuid);
+
+            return uuid;
+
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
         }
@@ -122,6 +118,7 @@ public class MojangAPIWrapper {
 
     /**
      * Fetches a key,value pair of usernames and uuids from the Mojang API
+     *
      * @param usernames Array of usernames used to fetch uuids
      * @return UUIDs fetched from the API
      * @throws IOException Invalid input
@@ -131,19 +128,19 @@ public class MojangAPIWrapper {
             throw new MojangAPIException("You can only check 10 usernames per request!");
         }
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/profiles/minecraft")).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
+            APIHelper helper = new APIHelper(new URL("https://api.mojang.com/profiles/minecraft"));
+
+            helper.setUserAgent(userAgent);
+            helper.setContentType("application/json");
+
             JsonArray requestObj = new JsonArray();
             for (String username : usernames) {
                 requestObj.add(username);
             }
 
-            Utils.writeOutputStream(connection.getOutputStream(), requestObj.toString());
+            helper.writeString(requestObj.toString());
 
-            String responseStr = Utils.readInputStream(connection.getInputStream());
-            JsonArray responseObj = new JsonParser().parse(responseStr).getAsJsonArray();
+            JsonArray responseObj = (JsonArray) helper.getResponseJson();
             HashMap<String, UUID> uuidList = new HashMap<>(responseObj.size());
 
             for (int i = responseObj.size() - 1; i >= 0; i--) {
@@ -162,16 +159,17 @@ public class MojangAPIWrapper {
     /**
      * Fetches a list of NameHistoryEntries from the API
      * Entries are sorted from oldest to newest
+     *
      * @param uuid UUID used to fetch NameHistoryEntries
      * @return List of NameHistoryEntries received from the API
      */
     public List<NameHistoryEntry> fromUUID(UUID uuid) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/user/profiles/" + Utils.toUndashed(uuid) + "/names")).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
+            APIHelper helper = new APIHelper(new URL("https://api.mojang.com/user/profiles/" + Utils.toUndashed(uuid) + "/names"));
 
-            String responseStr = Utils.readInputStream(connection.getInputStream());
-            JsonArray responseObj = new JsonParser().parse(responseStr).getAsJsonArray();
+            helper.setUserAgent(userAgent);
+
+            JsonArray responseObj = (JsonArray) helper.getResponseJson();
 
             List<NameHistoryEntry> nameEntries = new ArrayList<>();
 
@@ -193,21 +191,25 @@ public class MojangAPIWrapper {
 
     /**
      * Returns the player's skin URL
+     *
      * @param uuid
      * @return Entry of skin and cape URL (cape may be null)
      */
     public String getSkinUrl(UUID uuid) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + Utils.toUndashed(uuid))).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
 
-            if (connection.getResponseCode() != 200) {
+            APIHelper helper = new APIHelper(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + Utils.toUndashed(uuid)));
+
+            if (!(helper.getResponseCode() < 200 && helper.getResponseCode() > 299)) {
                 return null;
             }
 
-            String response = Utils.readInputStream(connection.getInputStream());
+            String response = helper.getResponseText();
+
             String dataAsBase64 = new JsonParser().parse(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
+
             JsonObject data = new JsonParser().parse(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
+
             return data.get("textures").getAsJsonObject().get("SKIN").getAsJsonObject().get("url").getAsString();
 
         } catch (IOException ex) {
@@ -217,14 +219,14 @@ public class MojangAPIWrapper {
 
     public String getCapeUrl(UUID uuid) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + Utils.toUndashed(uuid))).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
+            APIHelper helper = new APIHelper(new URL("https://sessionserver.mojang.com/session/minecraft/profile/" + Utils.toUndashed(uuid)));
+            helper.setUserAgent(userAgent);
 
-            if (connection.getResponseCode() != 200) {
+            if (!(helper.getResponseCode() > 200 && helper.getResponseCode() < 299)) {
                 return null;
             }
 
-            String response = Utils.readInputStream(connection.getInputStream());
+            String response = helper.getResponseText();
             String dataAsBase64 = new JsonParser().parse(response).getAsJsonObject().get("properties").getAsJsonArray().get(0).getAsJsonObject().get("value").getAsString();
             JsonObject data = new JsonParser().parse(new String(Base64.getDecoder().decode(dataAsBase64), StandardCharsets.UTF_8)).getAsJsonObject();
             String capeUrl = data.get("textures").getAsJsonObject().has("CAPE") ? data.get("textures").getAsJsonObject().get("CAPE").getAsJsonObject().get("url").getAsString() : null;
@@ -236,17 +238,17 @@ public class MojangAPIWrapper {
     }
 
     /**
-     *
      * @return List of SHA-256 hashes for blocked server IPs
      */
     public String[] getBlockedServerHashes() throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://sessionserver.mojang.com/blockedservers")).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
+            APIHelper helper = new APIHelper(new URL("https://sessionserver.mojang.com/blockedservers"));
 
-            String content = Utils.readInputStream(connection.getInputStream());
+            helper.setUserAgent(userAgent);
 
-            return content.split("\n");
+            String content = helper.getResponseText();
+
+            return content.split("\r?\n");
 
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
@@ -255,12 +257,13 @@ public class MojangAPIWrapper {
 
     public boolean resetSkin(UUID uuid, String accessToken) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/user/profile/" + Utils.toUndashed(uuid) + "/skin")).openConnection();
-            connection.setRequestMethod("DELETE");
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+            APIHelper helper = new APIHelper(new URL("https://api.mojang.com/user/profile/" + Utils.toUndashed(uuid) + "/skin"));
 
-            return connection.getResponseCode() == 204;
+            helper.setMethod("DELETE");
+            helper.setUserAgent(userAgent);
+            helper.setAuthorization("Bearer " + accessToken);
+
+            return (helper.getResponseCode() >= 200 && helper.getResponseCode() <= 299);
 
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
@@ -269,11 +272,12 @@ public class MojangAPIWrapper {
 
     public boolean verifySecurityLocation(String accessToken) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.mojang.com/user/security/location")).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
+            APIHelper helper = new APIHelper(new URL("https://api.mojang.com/user/security/location"));
 
-            return connection.getResponseCode() == 204;
+            helper.setUserAgent(userAgent);
+            helper.setAuthorization("Bearer " + accessToken);
+
+            return (helper.getResponseCode() >= 200 && helper.getResponseCode() <= 299);
 
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
@@ -282,18 +286,19 @@ public class MojangAPIWrapper {
 
     public boolean changeSkin(String accessToken, SkinType skinType, URL skinUrl) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL("https://api.minecraftservices.com/minecraft/profile/skins")).openConnection();
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setRequestProperty("Authorization", "Bearer " + accessToken);
-            connection.setDoOutput(true);
-            connection.setRequestMethod("POST");
+            APIHelper helper = new APIHelper(new URL("https://api.minecraftservices.com/minecraft/profile/skins"));
+
+            helper.setUserAgent(userAgent);
+            helper.setContentType("application/json");
+            helper.setAuthorization("Bearer " + accessToken);
+            helper.setMethod("POST");
 
             JsonObject req = new JsonObject();
             req.addProperty("variant", skinType.asString());
             req.addProperty("url", skinUrl.toString());
-            Utils.writeOutputStream(connection.getOutputStream(), req.toString());
-            return connection.getResponseCode() == 204 || connection.getResponseCode() == 200;
+            helper.writeString(req.toString());
+
+            return (helper.getResponseCode() >= 200 && helper.getResponseCode() <= 299);
 
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
