@@ -1,11 +1,9 @@
 package net.brxen.mojangapi;
 
 import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import net.brxen.mojangapi.exception.MojangAPIException;
 
 import java.io.*;
-import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class MojangAuthWrapper {
@@ -21,7 +19,7 @@ public class MojangAuthWrapper {
 
     public Player authenticate(String username, String password) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL(BASE_PATH + "/authenticate")).openConnection();
+            APIHelper helper = new APIHelper(new URL(BASE_PATH + "/authenticate"));
             JsonObject requestObj = new JsonObject();
             JsonObject agent = new JsonObject();
             agent.addProperty("name", "Minecraft");
@@ -33,24 +31,13 @@ public class MojangAuthWrapper {
             requestObj.addProperty("requestUser", true);
 
             // Set connection flags
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
+            helper.setUserAgent(userAgent);
+            helper.setMethod("POST");
+            helper.setContentType("application/json");
 
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            writer.write(requestObj.toString());
-            writer.flush();
+            helper.writeString(requestObj.toString());
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuilder responseStr = new StringBuilder();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                responseStr.append(line);
-            }
-
-            JsonObject responseObj = new JsonParser().parse(responseStr.toString()).getAsJsonObject();
+            JsonObject responseObj = (JsonObject) helper.getResponseJson();
 
             return new Player(Utils.fromUndashed(responseObj.get("selectedProfile").getAsJsonObject().get("id").getAsString()), responseObj.get("selectedProfile").getAsJsonObject().get("name").getAsString(), responseObj.get("accessToken").getAsString());
 
@@ -61,31 +48,21 @@ public class MojangAuthWrapper {
 
     public Player refresh(String accessToken) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL(BASE_PATH + "/refresh")).openConnection();
+            APIHelper helper = new APIHelper(new URL(BASE_PATH + "/refresh"));
+
             JsonObject requestObj = new JsonObject();
             requestObj.addProperty("accessToken", accessToken);
             requestObj.addProperty("clientToken", this.clientToken);
             requestObj.addProperty("requestUser", true);
 
             // Set connection flags
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
+            helper.setUserAgent(userAgent);
+            helper.setMethod("POST");
+            helper.setContentType("application/json");
 
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            writer.write(requestObj.toString());
-            writer.flush();
+            helper.writeString(requestObj.toString());
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-            StringBuilder responseStr = new StringBuilder();
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-                responseStr.append(line);
-            }
-
-            JsonObject responseObj = new JsonParser().parse(responseStr.toString()).getAsJsonObject();
+            JsonObject responseObj = (JsonObject) helper.getResponseJson();
 
             return new Player(Utils.fromUndashed(responseObj.get("selectedProfile").getAsJsonObject().get("id").getAsString()), responseObj.get("selectedProfile").getAsJsonObject().get("name").getAsString(), responseObj.get("accessToken").getAsString());
 
@@ -96,22 +73,20 @@ public class MojangAuthWrapper {
 
     public boolean validate(String accessToken) throws MojangAPIException{
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL(BASE_PATH + "/validate")).openConnection();
+            APIHelper helper = new APIHelper(new URL(BASE_PATH + "/validate"));
+
             JsonObject requestObj = new JsonObject();
             requestObj.addProperty("accessToken", accessToken);
             requestObj.addProperty("clientToken", this.clientToken);
 
             // Set connection flags
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
+            helper.setUserAgent(userAgent);
+            helper.setMethod("POST");
+            helper.setContentType("application/json");
 
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            writer.write(requestObj.toString());
-            writer.flush();
+            helper.writeString(requestObj.getAsString());
 
-            return true;
+            return helper.getResponseCode() >= 200 && helper.getResponseCode() <= 299;
 
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
@@ -120,51 +95,44 @@ public class MojangAuthWrapper {
 
     public boolean signout(String username, String password) throws MojangAPIException{
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL(BASE_PATH + "/signout")).openConnection();
+            APIHelper helper = new APIHelper(new URL(BASE_PATH + "/signout"));
             JsonObject requestObj = new JsonObject();
             requestObj.addProperty("username", username);
             requestObj.addProperty("password", password);
 
             // Set connection flags
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
+            helper.setUserAgent(userAgent);
+            helper.setMethod("POST");
+            helper.setContentType("application/json");
 
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            writer.write(requestObj.toString());
-            writer.flush();
+            helper.writeString(requestObj.toString());
 
-            return true;
+            return helper.getResponseCode() >= 200 && helper.getResponseCode() <= 299;
 
         } catch (IOException ex) {
             throw new MojangAPIException(ex.getMessage());
         }
     }
 
-    public boolean invalidate(String accessToken) {
+    public boolean invalidate(String accessToken) throws MojangAPIException {
         try {
-            HttpURLConnection connection = (HttpURLConnection) Utils.escapeURL(new URL(BASE_PATH + "/invalidate")).openConnection();
+            APIHelper helper = new APIHelper(new URL(BASE_PATH + "/invalidate"));
             JsonObject requestObj = new JsonObject();
             requestObj.addProperty("accessToken", accessToken);
             requestObj.addProperty("clientToken", this.clientToken);
 
             // Set connection flags
-            connection.setRequestProperty("User-Agent", userAgent);
-            connection.setRequestMethod("POST");
-            connection.setRequestProperty("Content-Type", "application/json");
-            connection.setDoOutput(true);
+            helper.setUserAgent(userAgent);
+            helper.setMethod("POST");
+            helper.setContentType("application/json");
 
-            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(connection.getOutputStream()));
-            writer.write(requestObj.toString());
-            writer.flush();
+            helper.writeString(requestObj.toString());
 
-            return true;
+            return helper.getResponseCode() >= 200 && helper.getResponseCode() <= 299;
 
-        } catch (IOException ignored) {
-        } // 403 Gets thrown which triggers an IOException
-
-        return false;
+        } catch (IOException ex) {
+            throw new MojangAPIException(ex.getMessage());
+        }
     }
 
 
